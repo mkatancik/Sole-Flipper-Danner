@@ -1,0 +1,129 @@
+/*Michael Katancik
+  Danner Boots
+  6/5/17
+  Sole Flipping Machine for Garfas
+*/
+
+// Servo library
+#include <Servo.h>;
+Servo garfas;
+Servo lowerGarfas;
+
+// Pre-assigning variables
+int angle = 45;
+int angle2 = 75;
+int state = 999;
+int prevState = 999;
+int counter = 0;
+
+// For delay function later on
+unsigned long prevTime = 0;
+unsigned long currentTime = 0;
+
+// For servo tweaking
+int interval = 1750;
+int servoDelay = 1500;
+int timeDelay = 5;
+int totalAngle = 45;
+int totalAngle2 = 70;
+
+// Setting pins
+int detectionLEDpin = 5;
+int standbyLEDpin = 3;
+int onLEDpin = 4;
+int laserPin = 2;
+int photoSensorPin = A0;
+int servoPin = 8;
+int servoPin2 = 12;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Arduino Ready!");
+  garfas.attach(servoPin);
+  garfas.write(angle);
+  lowerGarfas.attach(servoPin2);
+  lowerGarfas.write(angle2);
+  pinMode(laserPin, OUTPUT);
+  pinMode(onLEDpin, OUTPUT);
+  pinMode(standbyLEDpin, OUTPUT);
+  pinMode(photoSensorPin, INPUT);
+  digitalWrite(laserPin, HIGH);
+}
+
+void loop() {
+  laser();
+}
+
+
+void laser() {
+  prevState = state;
+  state = analogRead(photoSensorPin);
+  Serial.println(state);
+  if (state < 900 && prevState > 900) {
+    digitalWrite(detectionLEDpin, HIGH);
+    counter = counter + 1;
+    if (counter >= 2) {
+      digitalWrite(standbyLEDpin, LOW);
+      digitalWrite(onLEDpin, HIGH);
+      Serial.println(counter);
+      for (angle ; angle > 0; angle--) {
+        garfas.write(angle);
+        delay(timeDelay);
+      }
+
+      // Delay the rotation to original position
+      currentTime = millis();
+      prevTime = currentTime;
+      while (currentTime - prevTime <= interval) {
+        currentTime = millis();
+      }
+
+      // Rotate back to original position
+      for (angle = 0; angle < totalAngle; angle++) {
+        garfas.write(angle);
+        delay(timeDelay);
+      }
+      
+      // Delay before second serbo moves
+      currentTime = millis();
+      prevTime = currentTime;
+      while (currentTime - prevTime <= servoDelay) {
+        currentTime = millis();
+      }
+
+      // Rotating the lower servo
+      for (angle2 ; angle2 > 0; angle2--) {
+        lowerGarfas.write(angle2);
+        delay(timeDelay);
+      }
+      
+       // Delay the rotation to original position
+      currentTime = millis();
+      prevTime = currentTime;
+      while (currentTime - prevTime <= interval) {
+        currentTime = millis();
+      }
+
+      // Rotate back to original position
+      for (angle2 = 0; angle2 < totalAngle2; angle2++) {
+        lowerGarfas.write(angle2);
+        delay(timeDelay);
+      }
+      
+      digitalWrite(standbyLEDpin, HIGH);
+      digitalWrite(onLEDpin, LOW);
+      counter = 0;
+    }
+    else {
+      delay(100);
+    }
+  }
+  else if (state > 900 && prevState < 900) {
+    digitalWrite(detectionLEDpin, LOW);
+    delay(150);
+  }
+  else {
+    digitalWrite(standbyLEDpin, HIGH);
+    delay(150);
+  }
+}
